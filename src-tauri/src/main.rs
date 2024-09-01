@@ -78,9 +78,22 @@ fn main() {
             _ => {}
         })
         .setup(|app| {
-            let _window = app.get_window("main").unwrap();
+            let window = app.get_window("main").unwrap();
             #[cfg(debug_assertions)]
-            _window.open_devtools();
+            window.open_devtools();
+
+
+            if let Some(path) = std::env::args().nth(1) {
+                // we get two references to the same Window here since we can't move `window` into the closure.
+                let main_window = app.get_window("main").unwrap();
+
+                window.once("app-ready", move |_| {
+                    main_window
+                        .emit("open", Payload { message: Some(path.into()) })
+                        .expect("Error while emitting open event");
+                });
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -89,6 +102,14 @@ fn main() {
             cmd::get_entries,
             cmd::move_to_trash,
         ])
+        .on_window_event(|event|  {
+            if let tauri::WindowEvent::FileDrop(tauri::FileDropEvent::Dropped(paths)) = event.event() {
+                event
+                    .window()
+                    .emit("open", Payload { message: Some(paths[0].clone()) })
+                    .expect("Error while emitting open event");
+            }
+        })
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .run(context)
         .expect("Error while running tauri application");

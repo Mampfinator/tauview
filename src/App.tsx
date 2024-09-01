@@ -238,6 +238,12 @@ export const App = () => {
     }
   }, [url]);
 
+  useEffect(() => {
+    // notify the Rust layer that the app is ready.
+    // used for sending an `open` event if a file path is passed as an argument
+    getCurrent().emit("app-ready");
+  }, []);
+
   return (
     <div
       data-testid="container"
